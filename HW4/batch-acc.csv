@@ -1,0 +1,6 @@
+﻿Batch Size,Overall accuracy,Balanced accuarcy  0,Balanced accuarcy  1,Balanced accuarcy  2,Balanced accuarcy  3
+1,0.8,0.951,0.917,0.869,0.854
+32,0.765,0.922,0.805,0.872,0.759
+64,0.75,0.924,0.781,0.872,0.734
+128,0.63,0.914,0.649,0.829,0.575
+256,0.65,0.886,0.741,0.838,0.656

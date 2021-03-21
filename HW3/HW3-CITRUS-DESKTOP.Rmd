@@ -1,0 +1,165 @@
+---
+title: "CS 422 HW3"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Matthew Venter
+---
+
+### Loading librarys
+```{r}
+library(dplyr)
+library(plyr)
+library(arules)
+library(arulesViz)
+library(cluster)
+library(factoextra)
+library(fpc)
+```
+
+### Part 2.1-a Creating data frames needed
+```{r}
+#creating regular dataframes
+tr1k.df<- read.transactions(file ="Tr_1k_can.csv", sep=",", header=F)
+tr5k.df<- read.transactions(file ="tr-5k-can.csv", sep=",", header=F)
+tr20k.df<- read.transactions(file ="tr-20k-can.csv", sep=",", header=F)
+tr75k.df<- read.transactions(file ="tr-75k-can.csv", sep=",", header=F)
+```
+### Part 2.1-b Making rules
+```{r echo = T, results = 'hide'}
+tr1k.freq <- apriori(tr1k.df, parameter=list(support=0.0455, conf = 0.1, target="frequent itemsets"))
+tr1k.rules <- apriori(tr1k.df, parameter=list(support=0.0455, conf = 0.1))
+
+tr5k.freq <- apriori(tr5k.df, parameter=list(support=0.0455,conf = 0.1, target="frequent itemsets"))
+tr5k.rules <- apriori(tr5k.df, parameter=list(support=0.0455, conf = 0.1))
+
+tr20k.freq <- apriori(tr20k.df, parameter=list(support=0.0445,conf = 0.1, target="frequent itemsets"))
+tr20k.rules <- apriori(tr20k.df, parameter=list(support=0.0445, conf = 0.1))
+
+tr75k.freq <- apriori(tr75k.df, parameter=list(support=0.0438,conf = 0.1))
+tr75k.rules <- apriori(tr75k.df, parameter=list(support=0.0438,conf = 0.1, target="frequent itemsets"))
+```
+
+### Part 2.1-b Evaluating rules
+```{r}
+#tr1k inspection
+inspect(sort(tr1k.freq, decreasing = T, by="count"))
+inspect(sort(tr1k.rules, decreasing = T, by="count"))
+#tr5k inspection
+inspect(sort(tr5k.freq, decreasing = T, by="count"))
+inspect(sort(tr5k.rules, decreasing = T, by="count"))
+#tr20k inspection
+inspect(sort(tr20k.freq, decreasing = T, by="count"))
+inspect(sort(tr20k.rules, decreasing = T, by="count"))
+#tr75k inspection
+inspect(sort(tr75k.freq, decreasing = T, by="count"))
+inspect(sort(tr75k.rules, decreasing = T, by="count"))
+#del(tr1k.freq)
+#del(tr1k.rules)
+```
+### Part 2.1-c Evaluating rules
+As there are more and more observations the support for rules decrease slightly, the confidence raises with more obsevations.(count also increases but this is obvious)
+
+### Part 2.1-d Evaluating questions given
+i.) The most frequently purchaed items in 75k transations was {coffee eclair} with a count of 8193
+ii.) For the support given the least purchased items are {Gongolais Cookie,Truffle Cake} with a count of 3294
+
+### Part 2.2-a Data cleanup
+```{r}
+#creating data frame for mammels
+mammals.df <- read.csv("mammels.csv", sep=",", row.name = 1, header=T)
+```
+i.) I didn't want to remove any of the atributes as they all seemed important and not every top tooth type had the same amount of bottom teeth types.
+ii.) Data already seemed fine to work with as there are no crazy outliers and the range of values are fairly close together 
+iii.) I moved it to a csv file above!
+
+### Part 2.2-b Clustering 
+```{r}
+#i.)determining optimal number of clusters
+fviz_nbclust(mammals.df[1:8], kmeans, method="wss")
+fviz_nbclust(mammals.df[1:8], kmeans, method="silhouette")
+
+#ii.)using optimal number of clusters
+mammals.kmeans <- kmeans(mammals.df[1:8], centers=8, nstart=25)
+fviz_cluster(mammals.kmeans, data=mammals.df[1:8])
+
+#iii.) how many observations?
+cat("Number of Observationssum in cluster 1: ",sum(mammals.kmeans$cluster==1))
+cat("Number of Observationssum in cluster 2: ",sum(mammals.kmeans$cluster==2))
+cat("Number of Observationssum in cluster 3: ",sum(mammals.kmeans$cluster==3))
+cat("Number of Observationssum in cluster 4: ",sum(mammals.kmeans$cluster==4))
+cat("Number of Observationssum in cluster 5: ",sum(mammals.kmeans$cluster==5))
+cat("Number of Observationssum in cluster 6: ",sum(mammals.kmeans$cluster==6))
+cat("Number of Observationssum in cluster 7: ",sum(mammals.kmeans$cluster==7))
+cat("Number of Observationssum in cluster 8: ",sum(mammals.kmeans$cluster==8))
+#iv.) 
+cat("Total SSE:",mammals.kmeans$tot.withinss)
+#v.)
+cat("SSE for each cluster:",mammals.kmeans$withinss)
+```
+vi.)Analyisis Looking at the clustering and how the mammels fit in a species I can determine that the clustering does make sense and is correct
+
+### Part 2.3-a 
+```{r}
+set.seed(1122)
+samp.mam <- mammals.df[sample(nrow(mammals.df), 35), ]
+samp.mam<-scale(samp.mam)
+mammal.hc.single <- hclust(dist(samp.mam),method="single")
+mammal.hc.complete <- hclust(dist(samp.mam),method="complete")
+mammal.hc.avg <- hclust(dist(samp.mam),method="average")
+fviz_dend(mammal.hc.single,main = "Cluster Dendogram Single")
+fviz_dend(mammal.hc.complete, main = "Cluster Dendogram Complete")
+fviz_dend(mammal.hc.avg, main = "Cluster Dendogram AVG")
+```
+### Part2.3-b
+```{r}
+print("Single method clustering has the following two singletons: {Elk, Raindeer}, {Sea Lion, Fur Seal}, {Lump Nose Bat,Brown Bat} for a total of 3")
+print("Complete method clustering has the following two singletons: {Elk, Raindeer}, {Sea Lion, Fur Seal}, {Lump Nose Bat,Brown Bat}, {House Bat, Red Bat}, {Star Nose Mole, Raccoon} for a total of 5")
+print("Avg method clustering has the following two singletons: {Elk, Raindeer}, {Sea Lion, Fur Seal}, {Lump Nose Bat,Brown Bat}, {House Bat, Red Bat}, {Star Nose Mole, Raccoon} for a total of 5")
+```
+
+### Part2.3-b
+```{r}
+print("I would consider the single method to be the most pure method")
+```
+
+### Part2.3-d
+```{r}
+fviz_dend(mammal.hc.single,main = "Cluster Dendogram Single",h=2)
+print("If you were to draw a line at h=2 it would result in 7 differnt clusters (each color represents a cluster")
+```
+###Part 2.3-e
+```{r}
+fviz_dend(mammal.hc.single,main = "Cluster Dendogram Single",k=7)
+fviz_dend(mammal.hc.complete, main = "Cluster Dendogram Complete",k =7)
+fviz_dend(mammal.hc.avg, main = "Cluster Dendogram AVG",k =7)
+```
+###Part 2.3-f
+```{r}
+mammal.hc.single <- eclust(samp.mam, "hclust", hc_method = "single")
+mammal.hc.complete <- eclust(samp.mam, "hclust", hc_method ="complete")
+mammal.hc.avg <- eclust(samp.mam, "hclust", hc_method ="average")
+mammal.hc.single.stats <-cluster.stats(dist(samp.mam),mammal.hc.single$cluster)
+mammal.hc.complete.stats <-cluster.stats(dist(samp.mam),mammal.hc.complete$cluster)
+mammal.hc.avg.stats <-cluster.stats(dist(samp.mam),mammal.hc.avg$cluster)
+cat("avg silwidth of single hclust :",mammal.hc.single.stats$avg.silwidth)
+cat("dunn index of single hclust :",mammal.hc.single.stats$dunn)
+cat("avg silwidth of complete hclust :",mammal.hc.complete.stats$avg.silwidth)
+cat("dunn index of complete hclust :",mammal.hc.complete.stats$dunn)
+cat("avg silwidth of avg hclust :",mammal.hc.avg.stats$avg.silwidth)
+cat("dunn index of avg hclust :",mammal.hc.avg.stats$dunn)
+```
+### Part2.3-g
+<br/>
+The best linkage strategy according to sillhouette is "single"
+<br/>The best linkage strategy according to dunn index is "single"
+
+
+
+
+
+
+
+
+

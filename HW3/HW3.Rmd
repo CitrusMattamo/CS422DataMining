@@ -1,0 +1,25 @@
+---
+title: "CS 422 HW3"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Matthew Venter
+---
+
+### Loading librarys
+```{r}
+library(dplyr)
+library(plyr)
+```
+
+### Part 2.1-a Creating Canonical Representations
+```{r}
+#creating regular dataframes
+tr1k.df<- read.csv(file ="tr-1k.csv", sep=",", header=F)
+tr5k.df<- read.csv(file ="tr-5k.csv", sep=",", header=F)
+tr20k.df<- read.csv(file ="tr-20k.csv", sep=",", header=F)
+tr75.df<- read.csv(file ="tr-75k.csv", sep=",", header=F)
+prod.df<- read.csv(file ="products.csv", sep=",", header=F)
+tr1k.canon.df<-data.frame(c(prod.df),c("V2"),c("V3"),c("V4"),c("V5"),c("V6"),c("V7"))
+```

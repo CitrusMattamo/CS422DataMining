@@ -1,0 +1,53 @@
+---
+  title: "Homework 4, Problem 2.2"
+output: 
+  html_notebook:
+  toc: yes
+toc_float: yes
+---
+  
+library(keras)
+library(dplyr)
+library(caret)
+
+rm(list=ls())
+
+# Set working directory as needed
+
+df <- read.csv("activity-small.csv")
+
+# Seed the PRNG
+set.seed(1122)
+df <- df[sample(nrow(df)), ] # Shuffle, as all of the data in the .csv file
+                             # is ordered by label!  This will cause problems
+                             # if we do not shuffle as the validation split
+                             # may not include observations of class 3 (the
+                             # class that occurs at the end).  The validation_
+                             # split parameter samples from the end of the
+                             # training set.
+
+# Scale the dataset.  Copy this block of code as is and use it; we will get
+# into the detail of why we scale.  We will scale our dataset so all of the
+# predictors have a mean of 0 and standard deviation of 1.  Scale test and
+# training splits independently!
+
+indx <- sample(1:nrow(df), 0.20*nrow(df))
+test.df  <- df[indx, ]
+train.df <- df[-indx, ]
+
+label.test <- test.df$label
+test.df$label <- NULL
+test.df <- as.data.frame(scale(test.df))
+test.df$label <- label.test
+rm(label.test)
+
+label.train <- train.df$label
+train.df$label <- NULL
+train.df <- as.data.frame(scale(train.df))
+train.df$label <- label.train
+rm(label.train)
+rm(indx)
+
+# --- Your code goes below ---
+
+

@@ -1,0 +1,4 @@
+Mediator - mediates conflicts between group members.
+Makes sure there is an even distribution of talent skills and work flow
+Unifority with knowlage between group members
+more stuff to come soon

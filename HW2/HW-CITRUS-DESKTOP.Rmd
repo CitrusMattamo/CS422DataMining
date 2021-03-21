@@ -1,0 +1,158 @@
+---
+title: "CS 422 HW2"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Matthew Venter
+---
+
+### Loading librarys
+```{r}
+library(dplyr)
+library(plyr)
+library(rpart)
+library(caret)
+us.train$Scaled <- as.factor(us.train$Scaled)
+library(ROCR)
+library(randomForest)
+
+```
+
+### Part 2.1-a 
+```{r}
+hotel.df <- read.csv("hotel_bookings.csv", sep=",", header=T)
+hotel.df$is_canceled <- as.factor(hotel.df$is_canceled)
+hotel.df$same_room <- as.character(hotel.df$reserved_room_type)== as.character(hotel.df$assigned_room_type)#creating a varible that tracks if a person asked for a type of room and got the same type.
+cat("Resort hotel frequency:", sum(hotel.df$hotel=="Resort Hotel"),"\nCity hotel frequency:", sum(hotel.df$hotel=="City Hotel"))
+```
+### Part 2.1-b
+```{r}
+cat("Number of guests who canceled reservation:",sum(hotel.df$is_canceled==1) ,"\nNumber of guests did not cancel the reservation:",sum(hotel.df$is_canceled==0))
+```
+### Part 2.1-c
+```{r}
+cust.type.df <- count(hotel.df,"customer_type")
+cat("Customer type with the most reservations is Transient with", cust.type.df[which.max(cust.type.df$freq),2],"reservations")
+
+```
+### Part 2.1-d
+```{r}
+var0 <- hotel.df[which.max(hotel.df$required_car_parking_spaces),"required_car_parking_spaces"]
+cat(sum(hotel.df$required_car_parking_spaces == var0),"customers required the most number of parking spaces(" ,var0,")")
+```
+### Part 2.1-e
+```{r}
+var1 <- hotel.df[which.min(hotel.df$required_car_parking_spaces),"required_car_parking_spaces"]
+cat(sum(hotel.df$required_car_parking_spaces == var1),"customers required the least number of parking spaces(" ,var1,")")
+
+```
+### Part 2.1-f
+```{r}
+perc_good <- sum(as.character(hotel.df$reserved_room_type)==as.character(hotel.df$assigned_room_type))/119390*100
+cat(perc_good,"% of the people who expressed a room preference during reservation got the room during check-in.")
+
+```
+### Part 2.1-g
+```{r}
+hist.hotel.info.h1 <- filter(hotel.df, hotel == "City Hotel") 
+hist.hotel.info.h2 <- filter(hotel.df, hotel == "Resort Hotel"& country!= "NULL")
+hist.hotel.table.h1 <- table(hist.hotel.info.h1$country)
+hist.hotel.table.h2 <- table(hist.hotel.info.h2$country)
+barplot(tail(sort(hist.hotel.table.h1),n=10), main = "Top 10 Origins for Resort Hotels",ylab = "Amount of bookings per country",col = rainbow(10))
+barplot(tail(sort(hist.hotel.table.h2),n=10),main = "Top 10 Origins for City Hotels",ylab = "Amount of bookings per country",col = rainbow(10))
+```
+### Part 2.1-h
+ i.) The country with the most origins of either type of hotel was Portugal <br />
+ii.) We can conclude that the hotel information was most likely taken from hotels in portugal or nearby
+
+### Part 2.2-a
+```{r}
+#a.)
+set.seed(1122)
+index <- sample(1:nrow(hotel.df), size=0.1*nrow(hotel.df))
+hotel.test <- hotel.df[index, ]
+hotel.train <- hotel.df[-index, ]
+hotel.model <- rpart(is_canceled ~ deposit_type + lead_time +country + total_of_special_requests + required_car_parking_spaces + agent +same_room , method="class", data=hotel.train)
+```
+
+### Part 2.2.a.i
+```{r}
+rpart.plot(hotel.model, type = 4, extra = 4,branch.lty = 7, box.palette = "RdYlGn",compress =TRUE, ycompress=TRUE,  main="Hotel Cancelation Model")
+```
+
+### Part 2.2.a.ii
+```{r}
+print("The varibibles I chose were deposit_type, lead_time, country, total_of_special_requests, required_car_parking_spaces, + agent, and same_room")
+```
+
+### Part 2.2.a.iii
+```{r}
+hotel.fit <- predict(hotel.model, hotel.test, type = "class")
+confusionMatrix(hotel.fit,hotel.test$is_canceled)
+```
+
+### Part 2.2.a.iv
+```{r}
+pruned.rocr <- predict(hotel.model, newdata=hotel.test, type="prob")[,2]
+f.pred <- prediction(pruned.rocr, hotel.test$is_canceled)
+plot(performance(f.pred, "tpr", "fpr"), colorize=T, lwd=3)
+abline(0,1)
+```
+
+#### Part 2.2.a.v
+```{r}
+auc.pruned <- performance(f.pred, measure = "auc")
+cat(paste("The area under curve (AUC) for the full tree is ", 
+          round(auc.pruned@y.values[[1]], 3)))
+```
+
+#### Part 2.2.b.i
+```{r}
+printcp(hotel.model)
+plotcp(hotel.model)
+```
+#### Part 2.2.b.ii
+To me it seemed that the tree did not need pruning as there isnt a point in which it becomes more inacurate as it keeps learning (model may be underfitted)
+
+#### Part 2.3.a.i
+```{r}
+hotel.train$country = as.numeric(hotel.train$country)
+hotel.train$agent = as.numeric(hotel.train$agent)
+hotel.test$country = as.numeric(hotel.test$country)
+hotel.test$agent = as.numeric(hotel.test$agent)
+model.rf.mtry4 <- randomForest(is_canceled ~ deposit_type + lead_time  + total_of_special_requests + required_car_parking_spaces + country + agent + same_room, data = hotel.train, mtry=4, ntree=750, importance=TRUE, do.trace=250)
+rf.predict <- predict(model.rf.mtry4, hotel.test, type="class")
+confusionMatrix(rf.predict, hotel.test$is_canceled)
+model.rf.mtry6 <- randomForest(is_canceled ~ deposit_type + lead_time  + total_of_special_requests + required_car_parking_spaces + country + agent, data = hotel.train, mtry=6, ntree=750, importance=TRUE, do.trace=250)
+rf.predict <- predict(model.rf.mtry6, hotel.test, type="class")
+confusionMatrix(rf.predict, hotel.test$is_canceled)
+model.rf.mtry10 <- randomForest(is_canceled ~ deposit_type + lead_time  + total_of_special_requests + required_car_parking_spaces + country + agent, data = hotel.train, mtry=10, ntree=750, importance=TRUE, do.trace=250)
+rf.predict <- predict(model.rf.mtry10, hotel.test, type="class")
+confusionMatrix(rf.predict, hotel.test$is_canceled)
+
+
+```
+#### Part 2.3.a.i
+```{r}
+# 500,4 is the best!!!!!!!!!!!!!!!!!!!!!!!!
+model.rf <- randomForest(is_canceled ~ deposit_type + lead_time  + total_of_special_requests + required_car_parking_spaces + country + agent, ntree = 500,    mtry = 4, data = hotel.train)
+rf.predict <- predict(model.rf, hotel.test, type="class")
+confusionMatrix(rf.predict, hotel.test$is_canceled)
+print("The best prediction was with ntree = 500 and mtry = 4 it had an Accuracy of 85.33%, Sensitivity of 0.9048, Specificity of 0.7703, and Balanced Accuracy of 0.8376")
+```
+#### Part 2.3.a.ii
+```{r}
+# 500,4 is the best also for oob with a value of 14.60%
+model.rf <- randomForest(is_canceled ~ deposit_type + lead_time  + total_of_special_requests + required_car_parking_spaces + country + agent + same_room, ntree = 500, mtry = 4, data = hotel.train)
+rf.predict <- predict(model.rf, hotel.test, type="class")
+confusionMatrix(rf.predict, hotel.test$is_canceled)
+print("The best prediction was with ntree = 500 and mtry = 4 it had an Accuracy of 85.61%, Sensitivity of 0.9060, Specificity of 0.7743, and Balanced Accuracy of 0.8402")
+```
+#### Part 2.3.a.iii
+They are the same model I think this makes sense becasue with too many trees it starts over fitting so the accuracy will go down and the OOB wil go up
+
+
+
+
+

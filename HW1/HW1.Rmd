@@ -1,0 +1,143 @@
+---
+title: "CS 422 HW1"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float: yes
+author: Matthew Venter
+---
+
+### Loading librarys
+```{r}
+library(dplyr)
+library(psych)
+library(ISLR)
+```
+### Part 2.1-a 
+```{r}
+college_df <- read.csv("College.csv", sep=",", header=T)
+college_df[1:5,c(1,5,8,10)] 
+```
+
+### Part 2.1-b 
+```{r}
+private <- sum(college_df$Private=="Yes")
+public <- sum(college_df$Private=="No")
+cat("There are",private,"private colleges, and",public,"public colleges in the dataset")
+```
+
+### Part 2.1-c
+```{r}
+new_college_df <- college_df[c("Name", "Private","Apps", "Accept", "Enroll", "PhD", "perc.alumni", "S.F.Ratio", "Grad.Rate")]
+new_college_df[1:6,]
+```
+
+### Part 2.1-d
+```{r}
+pub_phd <- select(filter(new_college_df, Private =="Yes"), c("PhD")) 
+priv_phd <- select(filter(new_college_df, Private =="No"), c("PhD")) 
+hist(pub_phd$PhD,main = "Histogram for Public School % of Faculty with Ph.D.’s",xlab = "% of faculty with Ph.D.’s", breaks = 10, col = terrain.colors(12), border = "black")
+hist(priv_phd$PhD,main = "Histogram for Private School % of Faculty with Ph.D.’s",xlab = "% of faculty with Ph.D.’s", breaks = 9, col = terrain.colors(9), border = "black")
+```
+
+### Part 2.1-e
+```{r}
+head(new_college_df[order(new_college_df$Grad.Rate,decreasing = FALSE),],n=5) 
+head(new_college_df[order(new_college_df$Grad.Rate,decreasing = TRUE),],n=5) 
+```
+
+### Part 2.1-f
+```{r}
+pairs.panels(new_college_df[c("PhD", "S.F.Ratio", "Grad.Rate")])
+print("ii.) The relation between Grad Rate and PhD has the most correlation ")
+print("iii.) The relation between S.F.Ratio and PhD has the least correlation ")
+```
+
+### Part 2.1-g
+```{r}
+boxplot(perc.alumni ~ Private, data = college_df, col = "red", varwidth = TRUE, 
+        main = "Private v.s Public College for Alumni Donations",
+        ylab = " Percent of alumni who donate",xlab = "Private School?")
+print("On average more private college alumni donated back to there school than public college amlumni")
+```
+
+### Part 2.1-h
+```{r}
+P = ecdf(college_df$Expend)
+plot(P, panel.first = grid(10,10,lwd = 2))
+print("i.) the median expenditure per student is inbetween $7-8,000 ")
+print("ii.) 80% of students pay less than $13,000")
+```
+### Part 2.2-a
+```{r}
+data("Auto")
+lin_auto <- lm(mpg ~ horsepower, data = Auto)
+summary(lin_auto)
+print("i.) There is a relationship")
+print("ii.) It is a strong relationship")
+print("iii.) There is a negative relationship between horsepower and mpg (horsepower(+) = mpg(-))")
+print("iv.) 98 hp is associated with ~24.5 mpg (with a calculator)")
+print("----------------------------")
+print("")
+print("the associated 95 % confidence")
+predict(lin_auto, data.frame(horsepower = c(85)), interval ="confidence")
+print("")
+print("prediction intervals")
+predict(lin_auto, data.frame(horsepower = c(85)), interval ="prediction")
+```
+
+### Part 2.2-b
+```{r}
+plot(mpg ~ horsepower, data=Auto)
+abline(a=39.935861, b=-0.157845,col="red")
+```
+
+### Part 2.2-c
+```{r}
+ par(mfrow=c(2,2))
+ plot(lin_auto)
+```
+### Part 2.3-a
+```{r}
+# i.) name is not usefull for the model because there is no correlation between name and mpg so we can cut it out right away
+set.seed(1122)
+index <- sample(1:nrow(Auto),0.95*dim(Auto)[1])
+train.df <- Auto[index,]
+test.df <- Auto[-index,]
+autoT_model <- lm(mpg ~ . - name, data = train.df )
+summary(autoT_model)
+# ii.)
+# R^2 = 0.817, adjusted = 0.8135
+# RSE = 3.367 on 364 degrees freedom
+# RMSE = 
+#iii.)
+plot(autoT_model, which = 1)
+#iv.)
+hist(resid(autoT_model),main = "Histogram for residual ",xlab = "residual of the auto training model", breaks = 15, col = rainbow(12))
+# it does seem to follow a gausian distribution or bell curve
+```
+
+### Part 2.3-b
+```{r}
+#i.) from the previous part we will use the 3 vectors with the t value closest to 0
+second_autoT_model <- lm(mpg ~  cylinders + horsepower + acceleration , data = train.df )
+#ii.)
+summary(second_autoT_model)
+#iii.)
+plot(second_autoT_model, which = 1)
+#iv.)
+hist(resid(second_autoT_model),main = "Histogram for residual ",xlab = "residual of the 2nd auto training model", breaks = 15, col = rainbow(17))
+print("iv.)The histogram does resemble a gausian distribution")
+# v.)
+print("v.) looking at the summary of both the new model (b) has a higher resiudal standard error but a much lower R^2 value the F-statistic is also higher but I actualy belive the second one is more accurate based on there being more significant values being anaylized")
+```
+
+### Part 2.3-c/d (says d/e on hw)
+```{r}
+prediction <- predict(second_autoT_model,test.df,interval = "prediction")
+pred_test.df <- data.frame(predictions = prediction, actual = test.df$mpg)
+pred_test.df$matches <- pred_test.df$predictions.lwr<pred_test.df$actual & pred_test.df$predictions.upr > pred_test.df$actual
+pred_test.df
+tot <- sum(pred_test.df$matches==TRUE)
+cat(tot, "out of 20 is the total amount of matches")
+```
